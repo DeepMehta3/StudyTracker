@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FICO">
+<meta name="theme-color" content="#09090f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>SAP FICO Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#09090f;--s1:#111119;--s2:#181820;--s3:#202028;--s4:#28283a;
+  --b1:rgba(255,255,255,0.05);--b2:rgba(255,255,255,0.10);--b3:rgba(255,255,255,0.18);
+  --tx:#e2e2ee;--mu:#7070888;--hi:#38384e;
+  --mu:#70708a;--hi:#38384e;
+  --gn:#4ade80;--gdim:rgba(74,222,128,0.1);--gbr:rgba(74,222,128,0.22);
+  --am:#fbbf24;--adim:rgba(251,191,36,0.1);--abr:rgba(251,191,36,0.28);
+  --rd:#f87171;--rdim:rgba(248,113,113,0.1);--rbr:rgba(248,113,113,0.28);
+  --ac:#7c6af5;--acdim:rgba(124,106,245,0.14);--acbr:rgba(124,106,245,0.3);
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+  --safe-l:env(safe-area-inset-left,0px);
+  --safe-r:env(safe-area-inset-right,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;background:var(--bg);}
+body{font-family:'DM Sans',sans-serif;color:var(--tx);display:flex;flex-direction:column;padding-top:var(--safe-top);}
+
+/* ── App shell ── */
+.app-shell{display:flex;flex-direction:column;height:100%;overflow:hidden;}
+
+/* ── Status bar spacer ── */
+.status-bar{height:max(var(--safe-top),0px);background:var(--bg);flex-shrink:0;}
+
+/* ── Top bar ── */
+.top-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 16px 10px;
+  background:rgba(9,9,15,0.92);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--b1);
+  flex-shrink:0;position:relative;z-index:10;
+}
+.top-logo{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;flex:1;}
+.top-logo span{color:var(--ac);}
+.top-bar-actions{display:flex;gap:6px;}
+.icon-btn{
+  width:36px;height:36px;border-radius:10px;border:1px solid var(--b2);
+  background:var(--s2);color:var(--mu);font-size:16px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:all .15s;flex-shrink:0;
+}
+.icon-btn:active{background:var(--s3);transform:scale(0.93);}
+
+/* ── Scrollable body ── */
+.scroll-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+.scroll-body::-webkit-scrollbar{display:none;}
+
+/* ── Pages ── */
+.page{display:none;padding:0 0 calc(80px + var(--safe-bot)) 0;animation:fadeUp .2s ease both;}
+.page.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Dashboard page ── */
+.dash-hero{
+  padding:20px 16px 16px;
+  background:linear-gradient(160deg,rgba(124,106,245,0.08),rgba(245,145,106,0.04));
+  border-bottom:1px solid var(--b1);
+}
+.dash-greeting{font-size:12px;color:var(--mu);margin-bottom:4px;font-family:'DM Mono',monospace;letter-spacing:1px;}
+.dash-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1.15;margin-bottom:14px;}
+.dash-title em{font-style:normal;color:#a89af8;}
+
+/* Ring progress */
+.ring-row{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.ring-wrap{position:relative;width:80px;height:80px;flex-shrink:0;}
+.ring-wrap svg{transform:rotate(-90deg);}
+.ring-bg{fill:none;stroke:rgba(255,255,255,0.07);stroke-width:6;}
+.ring-fg{fill:none;stroke:url(#ringGrad);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .6s ease;}
+.ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:16px;font-weight:800;}
+.ring-stats{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.ring-stat{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:8px 10px;}
+.rs-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;line-height:1;}
+.rs-lbl{font-size:10px;color:var(--mu);margin-top:2px;font-family:'DM Mono',monospace;}
+
+/* Settings row in dash */
+.settings-row{display:flex;gap:8px;margin-bottom:16px;}
+.setting-chip{
+  flex:1;background:var(--s2);border:1px solid var(--b2);border-radius:10px;
+  padding:10px 12px;display:flex;flex-direction:column;gap:3px;cursor:pointer;
+  transition:all .15s;
+}
+.setting-chip:active{background:var(--s3);}
+.sc-label{font-size:10px;color:var(--mu);font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;}
+.sc-val{font-size:14px;font-weight:600;font-family:'DM Mono',monospace;color:var(--tx);}
+.sc-val.amber{color:var(--am);}
+
+/* Module cards in dash */
+.section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--mu);text-transform:uppercase;padding:16px 16px 8px;}
+.mod-card{
+  margin:0 12px 10px;
+  background:var(--s1);border:1px solid var(--b1);border-radius:14px;
+  overflow:hidden;cursor:pointer;transition:all .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.mod-card:active{transform:scale(0.98);}
+.mod-card-inner{padding:14px 16px;}
+.mc-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.mc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.mc-name{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;flex:1;}
+.mc-pct{font-family:'DM Mono',monospace;font-size:12px;color:var(--mu);}
+.mc-bar-wrap{background:rgba(255,255,255,0.05);border-radius:3px;height:3px;margin-bottom:10px;overflow:hidden;}
+.mc-bar-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+.mc-stats{display:flex;gap:12px;}
+.mc-stat{font-size:11px;color:var(--mu);}
+.mc-stat strong{color:var(--tx);font-weight:500;}
+.mc-chevron{color:var(--mu);font-size:12px;margin-top:2px;}
+
+/* Add module button */
+.add-mod-btn{
+  margin:0 12px 10px;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:14px;border-radius:14px;border:1px dashed var(--b2);
+  background:transparent;color:var(--mu);font-size:13px;cursor:pointer;
+  width:calc(100% - 24px);transition:all .2s;font-family:'DM Sans',sans-serif;
+}
+.add-mod-btn:active{background:var(--s1);}
+
+/* ── Module detail page ── */
+.mod-page-header{
+  position:sticky;top:0;z-index:5;
+  background:rgba(9,9,15,0.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--b1);
+  padding:12px 16px;display:flex;align-items:center;gap:10px;
+}
+.back-btn{
+  width:34px;height:34px;border-radius:9px;border:1px solid var(--b2);
+  background:var(--s2);color:var(--tx);font-size:16px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  flex-shrink:0;
+}
+.back-btn:active{background:var(--s3);}
+.mod-page-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mod-page-pill{font-family:'DM Mono',monospace;font-size:11px;color:var(--mu);flex-shrink:0;}
+
+/* Phase accordion */
+.phase-wrap{padding:8px 12px;}
+.phase-acc{
+  background:var(--s1);border:1px solid var(--b1);border-radius:12px;
+  margin-bottom:8px;overflow:hidden;transition:border-color .2s;
+}
+.phase-acc.all-done{border-color:var(--gbr);}
+.phase-acc-hd{
+  display:flex;align-items:center;gap:10px;padding:13px 14px;
+  cursor:pointer;user-select:none;-webkit-user-select:none;
+}
+.ph-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--mu);width:16px;flex-shrink:0;}
+.ph-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:600;flex:1;min-width:0;}
+.ph-pct-badge{
+  font-family:'DM Mono',monospace;font-size:10px;padding:2px 8px;
+  border-radius:20px;flex-shrink:0;
+}
+.ph-hrs{font-family:'DM Mono',monospace;font-size:11px;color:var(--mu);flex-shrink:0;white-space:nowrap;}
+.ph-chevron{color:var(--mu);font-size:10px;transition:transform .2s;flex-shrink:0;}
+.phase-acc.open .ph-chevron{transform:rotate(180deg);}
+.ph-mini-bar{height:2px;background:rgba(255,255,255,0.05);margin:0 14px;display:none;}
+.phase-acc.open .ph-mini-bar{display:block;}
+.ph-mini-fill{height:100%;transition:width .4s ease;}
+.ph-body{display:none;padding:0 14px 12px;}
+.phase-acc.open .ph-body{display:block;}
+
+/* Phase header controls */
+.ph-ctrl-row{display:flex;gap:6px;align-items:center;padding:8px 0 6px;border-bottom:1px solid var(--b1);margin-bottom:4px;}
+.ph-name-input{
+  flex:1;background:transparent;border:none;border-bottom:1px solid var(--b2);
+  color:var(--tx);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;
+  outline:none;padding:2px 0;min-width:0;
+}
+.ph-name-input:focus{border-bottom-color:var(--b3);}
+.btn-xs{
+  padding:5px 10px;border-radius:7px;border:1px solid var(--rbr);
+  background:var(--rdim);color:var(--rd);font-size:11px;cursor:pointer;
+  font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;
+}
+.btn-xs:active{opacity:.7;}
+
+/* Topic items */
+.topic-item{padding:10px 0;border-bottom:1px solid var(--b1);}
+.topic-item:last-of-type{border-bottom:none;}
+.topic-main-row{display:flex;align-items:center;gap:10px;}
+.chk-circle{
+  width:22px;height:22px;border-radius:7px;border:1.5px solid var(--b2);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  transition:all .2s;cursor:pointer;
+}
+.chk-circle:active{transform:scale(0.88);}
+.chk-circle.done{border-color:var(--chk-c,var(--gn));background:var(--chk-c,var(--gn));}
+.chk-tick{font-size:11px;font-weight:700;color:#000;display:none;}
+.chk-circle.done .chk-tick{display:block;}
+.topic-content{flex:1;min-width:0;}
+.topic-name-t{font-size:13px;line-height:1.4;transition:color .2s;}
+.topic-item.done .topic-name-t{color:var(--mu);text-decoration:line-through;text-decoration-color:var(--hi);}
+.topic-tcode{font-family:'DM Mono',monospace;font-size:10px;color:var(--mu);margin-top:2px;}
+.topic-item.done .topic-tcode{opacity:.4;}
+.topic-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.status-pill{
+  font-size:10px;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace;
+  cursor:pointer;transition:all .15s;border:1px solid var(--b1);color:var(--mu);background:transparent;
+}
+.status-pill.done{background:var(--gdim);border-color:var(--gbr);color:var(--gn);}
+.status-pill.wip{background:var(--adim);border-color:var(--abr);color:var(--am);}
+.topic-hrs-t{font-family:'DM Mono',monospace;font-size:11px;color:var(--mu);background:rgba(255,255,255,0.04);padding:3px 6px;border-radius:5px;}
+.topic-item.done .topic-hrs-t{opacity:.3;}
+
+/* Topic action row */
+.topic-action-row{display:flex;gap:6px;margin-top:6px;padding-left:32px;}
+.btn-action{
+  padding:5px 10px;border-radius:7px;border:1px solid var(--b1);
+  background:transparent;color:var(--mu);font-size:11px;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all .15s;
+}
+.btn-action:active{background:var(--s2);}
+.btn-action.del{border-color:var(--rbr);color:var(--rd);background:var(--rdim);}
+.btn-action.note-act{color:var(--am);}
+
+/* Topic inline note */
+.topic-note-area{display:none;padding:8px 0 4px 32px;}
+.topic-note-area.open{display:block;}
+.note-ta{
+  width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--b1);
+  border-radius:8px;padding:10px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;
+  font-size:13px;line-height:1.6;resize:vertical;min-height:70px;outline:none;
+  transition:border-color .2s;
+}
+.note-ta:focus{border-color:var(--b2);}
+.note-ta::placeholder{color:var(--hi);}
+
+/* Topic inline edit */
+.topic-edit-area{display:none;padding:8px 0 4px 32px;gap:6px;flex-direction:column;}
+.topic-edit-area.open{display:flex;}
+.ti-field{
+  background:var(--s2);border:1px solid var(--b2);border-radius:8px;
+  padding:10px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;
+  font-size:13px;outline:none;width:100%;transition:border-color .2s;
+}
+.ti-field:focus{border-color:var(--b3);}
+.ti-row{display:flex;gap:6px;}
+.ti-hrs{width:80px;font-family:'DM Mono',monospace;text-align:center;}
+.ti-save-row{display:flex;gap:6px;}
+.btn-ti-save{padding:9px 18px;border-radius:8px;background:var(--ac);border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;}
+.btn-ti-cancel{padding:9px 14px;border-radius:8px;background:transparent;border:1px solid var(--b2);color:var(--mu);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;}
+
+/* Add topic row */
+.add-topic-section{margin-top:10px;border-top:1px solid var(--b1);padding-top:10px;}
+.add-t-input{
+  width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--b1);
+  border-radius:8px;padding:10px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;
+  font-size:13px;outline:none;margin-bottom:6px;transition:border-color .2s;
+}
+.add-t-input:focus{border-color:var(--b2);}
+.add-t-input::placeholder{color:var(--hi);}
+.add-t-row{display:flex;gap:6px;}
+.add-t-code{
+  flex:1;background:rgba(255,255,255,0.03);border:1px solid var(--b1);
+  border-radius:8px;padding:9px 10px;color:var(--tx);font-family:'DM Mono',monospace;
+  font-size:11px;outline:none;transition:border-color .2s;
+}
+.add-t-code:focus{border-color:var(--b2);}
+.add-t-code::placeholder{color:var(--hi);}
+.add-t-hrs{
+  width:70px;background:rgba(255,255,255,0.03);border:1px solid var(--b1);
+  border-radius:8px;padding:9px 8px;color:var(--tx);font-family:'DM Mono',monospace;
+  font-size:11px;outline:none;text-align:center;transition:border-color .2s;
+}
+.add-t-hrs:focus{border-color:var(--b2);}
+.add-t-btn{
+  padding:9px 14px;border-radius:8px;border:1px solid var(--b2);
+  background:rgba(255,255,255,0.06);color:var(--tx);font-size:13px;font-weight:500;
+  cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;
+}
+.add-t-btn:active{background:rgba(255,255,255,0.12);}
+
+/* Phase notes */
+.phase-notes-section{margin-top:10px;padding-top:10px;border-top:1px solid var(--b1);}
+.phase-notes-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--mu);text-transform:uppercase;margin-bottom:6px;}
+.phase-notes-ta{
+  width:100%;background:rgba(255,255,255,0.02);border:1px solid var(--b1);
+  border-radius:8px;padding:10px 12px;color:var(--tx);font-family:'DM Sans',sans-serif;
+  font-size:12px;line-height:1.6;resize:vertical;min-height:52px;outline:none;
+  transition:border-color .2s;
+}
+.phase-notes-ta:focus{border-color:var(--b2);}
+.phase-notes-ta::placeholder{color:var(--hi);}
+
+/* Add phase */
+.add-phase-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:13px;border-radius:12px;border:1px dashed var(--b2);
+  background:transparent;color:var(--mu);font-size:13px;cursor:pointer;
+  font-family:'DM Sans',sans-serif;margin-top:4px;transition:all .2s;
+}
+.add-phase-btn:active{background:var(--s1);}
+
+/* ── Settings page ── */
+.settings-page{padding:16px;}
+.settings-section{margin-bottom:24px;}
+.settings-section-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--mu);text-transform:uppercase;margin-bottom:10px;}
+.setting-row{
+  background:var(--s1);border:1px solid var(--b1);border-radius:10px;
+  padding:13px 14px;display:flex;align-items:center;gap:12px;margin-bottom:8px;
+}
+.setting-row-icon{font-size:18px;width:28px;text-align:center;flex-shrink:0;}
+.setting-row-label{flex:1;font-size:14px;}
+.setting-row-sub{font-size:11px;color:var(--mu);margin-top:1px;}
+.setting-input{
+  background:var(--s3);border:1px solid var(--b2);border-radius:8px;
+  padding:7px 10px;color:var(--tx);font-family:'DM Mono',monospace;font-size:13px;
+  outline:none;text-align:right;transition:border-color .2s;
+}
+.setting-input:focus{border-color:var(--b3);}
+.setting-input-date{width:140px;}
+.setting-input-num{width:56px;}
+.btn-setting-action{
+  padding:11px 16px;border-radius:10px;border:1px solid var(--b2);
+  background:var(--s2);color:var(--tx);font-size:13px;font-weight:500;
+  cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:8px;
+  width:100%;margin-bottom:8px;transition:all .15s;
+}
+.btn-setting-action:active{background:var(--s3);}
+.btn-setting-action.green{border-color:var(--gbr);background:var(--gdim);color:var(--gn);}
+.btn-setting-action.red{border-color:var(--rbr);background:var(--rdim);color:var(--rd);}
+.btn-setting-action span{flex:1;text-align:left;}
+
+/* ── Bottom nav ── */
+.bottom-nav{
+  display:flex;align-items:stretch;
+  background:rgba(9,9,15,0.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid var(--b1);
+  padding-bottom:var(--safe-bot);
+  flex-shrink:0;position:relative;z-index:10;
+}
+.nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:10px 0 8px;cursor:pointer;transition:all .15s;gap:3px;
+  border:none;background:transparent;color:var(--mu);font-family:'DM Sans',sans-serif;
+}
+.nav-item:active{background:var(--s1);}
+.nav-item.active{color:var(--ac);}
+.nav-icon{font-size:20px;line-height:1;}
+.nav-label{font-size:10px;font-weight:500;font-family:'DM Mono',monospace;letter-spacing:.5px;}
+
+/* ── Sheet (bottom modal) ── */
+.sheet-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);
+  z-index:50;align-items:flex-end;justify-content:center;
+}
+.sheet-overlay.open{display:flex;animation:fadeIn .15s ease;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.sheet{
+  background:var(--s2);border-radius:20px 20px 0 0;border-top:1px solid var(--b2);
+  padding:0 0 calc(20px + var(--safe-bot));width:100%;max-height:85vh;overflow-y:auto;
+  animation:slideUp .22s ease;
+}
+@keyframes slideUp{from{transform:translateY(30px);}to{transform:translateY(0);}}
+.sheet-handle{width:36px;height:4px;background:var(--b3);border-radius:2px;margin:12px auto 16px;}
+.sheet-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;padding:0 20px 14px;border-bottom:1px solid var(--b1);}
+.sheet-body{padding:16px 20px;}
+.sheet-label{font-size:11px;color:var(--mu);margin-bottom:6px;font-family:'DM Mono',monospace;letter-spacing:1px;text-transform:uppercase;display:block;}
+.sheet-input{
+  width:100%;background:var(--s3);border:1px solid var(--b2);border-radius:10px;
+  padding:12px 14px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:15px;
+  outline:none;margin-bottom:14px;-webkit-appearance:none;
+}
+.sheet-input:focus{border-color:var(--b3);}
+.sheet-btn{
+  width:100%;padding:14px;border-radius:12px;border:none;
+  background:var(--ac);color:#fff;font-size:15px;font-weight:600;
+  cursor:pointer;font-family:'DM Sans',sans-serif;margin-top:4px;
+}
+.sheet-btn:active{opacity:.85;}
+.color-swatches{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.c-swatch{width:36px;height:36px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .2s;flex-shrink:0;}
+.c-swatch.selected{border-color:#fff;transform:scale(1.15);}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:calc(88px + var(--safe-bot));left:50%;transform:translateX(-50%) translateY(20px);
+  z-index:200;background:var(--s3);border:1px solid var(--gbr);border-radius:40px;
+  padding:10px 20px;font-size:13px;color:var(--gn);
+  opacity:0;transition:all .3s ease;pointer-events:none;white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ── Misc ── */
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+input[type=date]{color-scheme:dark;}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div class="status-bar"></div>
+
+  <!-- Top bar -->
+  <div class="top-bar">
+    <div class="top-logo">SAP <span>FICO</span></div>
+    <div class="top-bar-actions">
+      <button class="icon-btn" onclick="showPage('settings')" title="Settings">⚙️</button>
+    </div>
+  </div>
+
+  <!-- Scrollable content -->
+  <div class="scroll-body" id="scrollBody">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="dash-hero">
+        <div class="dash-greeting" id="greeting">GOOD MORNING</div>
+        <div class="dash-title">Your <em>Expert</em><br>Journey</div>
+
+        <div class="ring-row">
+          <div class="ring-wrap">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <defs>
+                <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#7c6af5"/>
+                  <stop offset="100%" stop-color="#f5916a"/>
+                </linearGradient>
+              </defs>
+              <circle class="ring-bg" cx="40" cy="40" r="34"/>
+              <circle class="ring-fg" id="ringFg" cx="40" cy="40" r="34"
+                stroke-dasharray="213.6" stroke-dashoffset="213.6"/>
+            </svg>
+            <div class="ring-pct" id="ringPct">0%</div>
+          </div>
+          <div class="ring-stats">
+            <div class="ring-stat"><div class="rs-val" id="rsDone">0</div><div class="rs-lbl">Done</div></div>
+            <div class="ring-stat"><div class="rs-val" id="rsWip">0</div><div class="rs-lbl">In progress</div></div>
+            <div class="ring-stat"><div class="rs-val" id="rsHrsDone">0</div><div class="rs-lbl">Hrs logged</div></div>
+            <div class="ring-stat"><div class="rs-val rs-amber" id="rsHrsLeft" style="color:var(--am)">0</div><div class="rs-lbl">Hrs left</div></div>
+          </div>
+        </div>
+
+        <div class="settings-row">
+          <div class="setting-chip" onclick="focusSettingTarget()">
+            <div class="sc-label">Target date</div>
+            <div class="sc-val amber" id="chipTarget">Not set</div>
+          </div>
+          <div class="setting-chip" onclick="focusSettingHpw()">
+            <div class="sc-label">Hrs / week</div>
+            <div class="sc-val" id="chipHpw">8 hrs</div>
+          </div>
+          <div class="setting-chip">
+            <div class="sc-label">Weeks left</div>
+            <div class="sc-val amber" id="chipWeeks">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Modules</div>
+      <div id="modCards"></div>
+      <button class="add-mod-btn" onclick="openAddModuleSheet()">+ Add module</button>
+    </div>
+
+    <!-- Module detail -->
+    <div class="page" id="page-module">
+      <div class="mod-page-header">
+        <button class="back-btn" onclick="showPage('dashboard')">‹</button>
+        <div class="mod-page-title" id="modPageTitle">Module</div>
+        <div class="mod-page-pill" id="modPagePill"></div>
+      </div>
+      <div class="phase-wrap" id="phaseList"></div>
+    </div>
+
+    <!-- Settings -->
+    <div class="page" id="page-settings">
+      <div class="settings-page">
+        <div class="settings-section">
+          <div class="settings-section-title">Study plan</div>
+          <div class="setting-row">
+            <div class="setting-row-icon">📅</div>
+            <div style="flex:1"><div class="setting-row-label">Target date</div><div class="setting-row-sub">When you want to be exam-ready</div></div>
+            <input type="date" class="setting-input setting-input-date" id="settingDate" onchange="updateSettings()">
+          </div>
+          <div class="setting-row">
+            <div class="setting-row-icon">⏱</div>
+            <div style="flex:1"><div class="setting-row-label">Hours per week</div><div class="setting-row-sub">Study hours available</div></div>
+            <input type="number" class="setting-input setting-input-num" id="settingHpw" min="1" max="80" onchange="updateSettings()">
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Data</div>
+          <button class="btn-setting-action green" onclick="saveAll()">
+            <span>💾</span><span>Save progress now</span>
+          </button>
+          <button class="btn-setting-action" onclick="exportData()">
+            <span>⬇️</span><span>Export plan as JSON</span>
+          </button>
+          <label class="btn-setting-action" style="cursor:pointer">
+            <span>⬆️</span><span>Import plan from JSON</span>
+            <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+          </label>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">Modules</div>
+          <div id="modSettingsList"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /scroll-body -->
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard')">
+      <div class="nav-icon">⊙</div>
+      <div class="nav-label">Dashboard</div>
+    </button>
+    <button class="nav-item" id="nav-modules" onclick="showPage('module')">
+      <div class="nav-icon">◫</div>
+      <div class="nav-label">Modules</div>
+    </button>
+    <button class="nav-item" id="nav-settings" onclick="showPage('settings')">
+      <div class="nav-icon">◎</div>
+      <div class="nav-label">Settings</div>
+    </button>
+  </nav>
+</div>
+
+<!-- Bottom sheet -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheetTitle">Action</div>
+    <div class="sheet-body" id="sheetBody"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Constants ──
+const STORE = 'sap_pwa_v1';
+const COLORS = [
+  {a:'#7c6af5',dim:'rgba(124,106,245,0.14)',br:'rgba(124,106,245,0.3)'},
+  {a:'#f5916a',dim:'rgba(245,145,106,0.13)',br:'rgba(245,145,106,0.3)'},
+  {a:'#2dd4bf',dim:'rgba(45,212,191,0.11)',br:'rgba(45,212,191,0.28)'},
+  {a:'#f472b6',dim:'rgba(244,114,182,0.12)',br:'rgba(244,114,182,0.3)'},
+  {a:'#34d399',dim:'rgba(52,211,153,0.12)',br:'rgba(52,211,153,0.28)'},
+  {a:'#fb923c',dim:'rgba(251,146,60,0.12)',br:'rgba(251,146,60,0.28)'},
+];
+const BDGE = [
+  {bg:'rgba(124,106,245,0.15)',c:'#a89af8'},
+  {bg:'rgba(45,212,191,0.12)',c:'#5eead4'},
+  {bg:'rgba(251,191,36,0.12)',c:'#fbbf24'},
+  {bg:'rgba(245,145,106,0.14)',c:'#f8b49a'},
+  {bg:'rgba(74,222,128,0.11)',c:'#4ade80'},
+  {bg:'rgba(107,107,128,0.12)',c:'#9090a8'},
+];
+
+let D, curMod=0, dirty=false;
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+// ── Default data ──
+function def(){
+  return {
+    settings:{targetDate:'',hrsPerWeek:8},
+    modules:[
+      {id:uid(),name:'GL Accounting',ci:0,phases:[
+        {id:uid(),name:'Already mastered',bi:5,open:false,notes:'',topics:[
+          {id:uid(),name:'NewGL architecture & ledger groups',code:'NewGL',hrs:0,s:'done',note:''},
+          {id:uid(),name:'Document splitting rules & passive splits',code:'NewGL config',hrs:0,s:'done',note:''},
+          {id:uid(),name:'Currency types (10/30/40), FSG, posting keys',code:'OBB8',hrs:0,s:'done',note:''},
+          {id:uid(),name:'GR/IR clearing',code:'F.13, MR11',hrs:0,s:'done',note:''},
+          {id:uid(),name:'MM/SD account determination',code:'OBYC, VKOA',hrs:0,s:'done',note:''},
+          {id:uid(),name:'ACDOCA & CDS views',code:'SE16N',hrs:0,s:'done',note:''},
+        ]},
+        {id:uid(),name:'Phase 1 · Advanced configuration',bi:0,open:false,notes:'',topics:[
+          {id:uid(),name:'Chart of accounts — group CoA, country CoA',code:'OB13, OB14',hrs:2,s:'todo',note:''},
+          {id:uid(),name:'Automatic postings — exchange rate differences',code:'OB40, OBXL',hrs:3,s:'todo',note:''},
+          {id:uid(),name:'Cross-company & intercompany config',code:'OBYA, OBY6',hrs:3,s:'todo',note:''},
+          {id:uid(),name:'Validations & substitutions',code:'GGB0, GGB1',hrs:3,s:'todo',note:''},
+          {id:uid(),name:'Document change rules & reversal config',code:'OB32',hrs:1,s:'todo',note:''},
+        ]},
+        {id:uid(),name:'Phase 2 · Period-end & year-end',bi:1,open:false,notes:'',topics:[
+          {id:uid(),name:'Accruals & deferrals — recurring entries',code:'FBS1, F.81',hrs:2,s:'todo',note:''},
+          {id:uid(),name:'Foreign currency revaluation',code:'FAGL_FC_VAL',hrs:3,s:'todo',note:''},
+          {id:uid(),name:'Balance carryforward & retained earnings',code:'FAGLGVTR',hrs:2,s:'todo',note:''},
+          {id:uid(),name:'Closing cockpit — task dependencies',code:'CLOCOC',hrs:3,s:'todo',note:''},
+          {id:uid(),name:'Ind AS / IFRS period-end specifics',code:'India context',hrs:2,s:'todo',note:''},
+        ]},
+        {id:uid(),name:'Phase 3 · Reporting',bi:2,open:false,notes:'',topics:[
+          {id:uid(),name:'Financial statement versions — FSV hierarchy',code:'OB58',hrs:2,s:'todo',note:''},
+          {id:uid(),name:'Report Painter / Report Writer',code:'GRR3',hrs:3,s:'todo',note:''},
+          {id:uid(),name:'Fiori GL apps — Trial Balance, JE Explorer',code:'F1005, F1006',hrs:2,s:'todo',note:''},
+          {id:uid(),name:'SAP Analytics Cloud basics for Finance',code:'SAC',hrs:3,s:'todo',note:''},
+        ]},
+        {id:uid(),name:'Phase 4 · Integration gaps',bi:3,open:false,notes:'',topics:[
+          {id:uid(),name:'GL ↔ AP/AR — reconciliation & payment clearing',code:'OBYP, OBYR',hrs:3,s:'todo',note:''},
+          {id:uid(),name:'GL ↔ AA — APC, accumulated depreciation',code:'AO90',hrs:3,s:'todo',note:''},
+          {id:uid(),name:'GL ↔ CO — cost elements, real-time FI-CO',code:'KA01, OKB9',hrs:2,s:'todo',note:''},
+        ]},
+      ]},
+      {id:uid(),name:'Asset Accounting',ci:1,phases:[
+        {id:uid(),name:'Phase 1 · Foundation & master data',bi:0,open:false,notes:'',topics:[
+          {id:uid(),name:'New Asset Accounting vs ECC differences',code:'FIN_AA_PARALLEL_VAL',hrs:3,s:'todo',note:''},
+          {id:uid(),name:'Chart of Depreciation & FI-AA integration',code:'OAOB, EC08',hrs:4,s:'todo',note:''},
+          {id:uid(),name:'Asset classes, master data, numbering',code:'AS01, ANLN1',hrs:4,s:'todo',note:''},
+          {id:uid(),name:'Depreciation areas & parallel valuation',code:'OADB, AO21',hrs:4,s:'todo',note:''},
+        ]},
+        {id:uid(),name:'Phase 2 · Transactions & config',bi:1,open:false,notes:'',topics:[
+          {id:uid(),name:'Asset acquisition — internal & external',code:'F-90, MIGO',hrs:5,s:'todo',note:''},
+          {id:uid(),name:'Depreciation runs & posting rules',code:'AFAB, AFABN',hrs:5,s:'todo',note:''},
+          {id:uid(),name:'Asset transfers, scrapping, retirements',code:'ABAON, ABAVN',hrs:5,s:'todo',note:''},
+          {id:uid(),name:'Asset under Construction & settlement',code:'AIAB, AIBU',hrs:5,s:'todo',note:''},
+          {id:uid(),name:'Year-end closing & fiscal year change',code:'AJRW, AJAB',hrs:5,s:'todo',note:''},
+          {id:uid(),name:'Impairment, write-ups, unplanned depreciation',code:'ABAW, ABZU',hrs:5,s:'todo',note:''},
+        ]},
+        {id:uid(),name:'Phase 3 · S/4HANA-specific',bi:2,open:false,notes:'',topics:[
+          {id:uid(),name:'New AA activation via migration cockpit',code:'FINS_MIG_COCKPIT',hrs:5,s:'todo',note:''},
+          {id:uid(),name:'Leading vs non-leading ledgers, IFRS 16',code:'Ledger config',hrs:6,s:'todo',note:''},
+          {id:uid(),name:'Integration with CO-PC, PS, PM, MM',code:'Multi-module',hrs:6,s:'todo',note:''},
+          {id:uid(),name:'Mass processing & LTMC asset migration',code:'LTMC, LSMW',hrs:4,s:'todo',note:''},
+          {id:uid(),name:'Fiori apps for Asset Accounting',code:'AW01N Fiori',hrs:4,s:'todo',note:''},
+        ]},
+        {id:uid(),name:'Phase 4 · Reporting & expert',bi:3,open:false,notes:'',topics:[
+          {id:uid(),name:'Standard AA reports — asset explorer',code:'AW01N, S_ALR_*',hrs:4,s:'todo',note:''},
+          {id:uid(),name:'Reconciliation FI-AA vs GL',code:'ABST2',hrs:4,s:'todo',note:''},
+          {id:uid(),name:'End-to-end config in sandbox system',code:'Hands-on',hrs:8,s:'todo',note:''},
+          {id:uid(),name:'Troubleshooting AA errors & OSS notes',code:'SAP Notes',hrs:4,s:'todo',note:''},
+        ]},
+      ]},
+    ]
+  };
+}
+
+// ── Storage ──
+function load(){
+  const r=localStorage.getItem(STORE);
+  D=r?JSON.parse(r):def();
+  D.modules.forEach(m=>m.phases.forEach(p=>{
+    if(!p.notes)p.notes='';
+    p.topics.forEach(t=>{if(!t.note)t.note='';if(!t.s)t.s='todo';});
+  }));
+}
+function persist(){
+  localStorage.setItem(STORE,JSON.stringify(D));
+  dirty=false;
+  showToast('Progress saved ✓');
+}
+function saveAll(){persist();}
+function markDirty(){dirty=true;}
+
+function exportData(){
+  const b=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download='sap_tracker_'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  showToast('Exported ✓');
+}
+function importData(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{try{D=JSON.parse(ev.target.result);renderAll();persist();}catch{showToast('Invalid file');}};
+  r.readAsText(f);
+}
+
+// ── Toast ──
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ── Sheet ──
+let sheetCb=null;
+function openSheet(title,html,cb){
+  document.getElementById('sheetTitle').textContent=title;
+  document.getElementById('sheetBody').innerHTML=html;
+  sheetCb=cb;document.getElementById('sheetOverlay').classList.add('open');
+  setTimeout(()=>{const f=document.querySelector('.sheet-body input');if(f)f.focus();},100);
+}
+function closeSheet(){document.getElementById('sheetOverlay').classList.remove('open');sheetCb=null;}
+function confirmSheet(){if(sheetCb)sheetCb();closeSheet();}
+
+// ── Pages ──
+let curPage='dashboard';
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const nav=document.getElementById('nav-'+p);
+  if(nav)nav.classList.add('active');
+  document.getElementById('scrollBody').scrollTop=0;
+  curPage=p;
+  if(p==='dashboard')renderDashboard();
+  if(p==='module')renderModulePage();
+  if(p==='settings')renderSettings();
+}
+
+// ── Stats ──
+function modStats(mi){
+  let done=0,total=0,doneHrs=0,totalHrs=0,wip=0;
+  D.modules[mi].phases.forEach(p=>p.topics.forEach(t=>{
+    total++;totalHrs+=t.hrs;
+    if(t.s==='done'){done++;doneHrs+=t.hrs;}
+    if(t.s==='wip')wip++;
+  }));
+  return{done,total,doneHrs,totalHrs,wip};
+}
+function overallStats(){
+  let done=0,total=0,doneHrs=0,totalHrs=0,wip=0;
+  D.modules.forEach((_,mi)=>{const s=modStats(mi);done+=s.done;total+=s.total;doneHrs+=s.doneHrs;totalHrs+=s.totalHrs;wip+=s.wip;});
+  return{done,total,doneHrs,totalHrs,wip};
+}
+
+// ── Dashboard ──
+function renderDashboard(){
+  const s=overallStats();
+  const pct=s.total?Math.round(s.done/s.total*100):0;
+  const circ=2*Math.PI*34;
+  document.getElementById('ringFg').setAttribute('stroke-dashoffset',circ*(1-pct/100));
+  document.getElementById('ringPct').textContent=pct+'%';
+  document.getElementById('rsDone').textContent=s.done;
+  document.getElementById('rsWip').textContent=s.wip;
+  document.getElementById('rsHrsDone').textContent=s.doneHrs;
+  document.getElementById('rsHrsLeft').textContent=s.totalHrs-s.doneHrs;
+  const hpw=D.settings.hrsPerWeek||8;
+  const hrsLeft=s.totalHrs-s.doneHrs;
+  const weeks=hrsLeft>0?Math.ceil(hrsLeft/hpw):0;
+  document.getElementById('chipWeeks').textContent=weeks>0?weeks+'w':'Done!';
+  document.getElementById('chipHpw').textContent=hpw+' hrs';
+  const td=D.settings.targetDate;
+  document.getElementById('chipTarget').textContent=td?new Date(td).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'Not set';
+
+  // greeting
+  const h=new Date().getHours();
+  document.getElementById('greeting').textContent=h<12?'GOOD MORNING':h<17?'GOOD AFTERNOON':'GOOD EVENING';
+
+  // module cards
+  const mc=document.getElementById('modCards');
+  mc.innerHTML='';
+  D.modules.forEach((mod,mi)=>{
+    const st=modStats(mi);
+    const c=COLORS[mod.ci%COLORS.length];
+    const pct2=st.total?Math.round(st.done/st.total*100):0;
+    const div=document.createElement('div');
+    div.className='mod-card';
+    div.innerHTML=`
+      <div class="mod-card-inner">
+        <div class="mc-top">
+          <div class="mc-dot" style="background:${c.a}"></div>
+          <div class="mc-name">${mod.name}</div>
+          <div class="mc-pct">${pct2}%</div>
+          <div class="mc-chevron">›</div>
+        </div>
+        <div class="mc-bar-wrap"><div class="mc-bar-fill" style="width:${pct2}%;background:${c.a}"></div></div>
+        <div class="mc-stats">
+          <div class="mc-stat"><strong>${st.done}/${st.total}</strong> topics</div>
+          <div class="mc-stat"><strong>${st.doneHrs}/${st.totalHrs}</strong> hrs</div>
+          <div class="mc-stat"><strong>${st.wip}</strong> in progress</div>
+        </div>
+      </div>`;
+    div.onclick=()=>{curMod=mi;showPage('module');};
+    mc.appendChild(div);
+  });
+}
+
+// ── Module page ──
+function renderModulePage(){
+  const mod=D.modules[curMod];
+  const c=COLORS[mod.ci%COLORS.length];
+  const st=modStats(curMod);
+  document.getElementById('modPageTitle').textContent=mod.name;
+  document.getElementById('modPagePill').textContent=st.done+'/'+st.total+' · '+st.doneHrs+'h';
+
+  const pl=document.getElementById('phaseList');
+  pl.innerHTML='';
+  mod.phases.forEach((phase,pi)=>{
+    const pDone=phase.topics.filter(t=>t.s==='done').length;
+    const pTotal=phase.topics.length;
+    const pPct=pTotal?Math.round(pDone/pTotal*100):0;
+    const pHrs=phase.topics.reduce((s,t)=>s+t.hrs,0);
+    const pDoneHrs=phase.topics.filter(t=>t.s==='done').reduce((s,t)=>s+t.hrs,0);
+    const bc=BDGE[phase.bi%BDGE.length];
+    const acc=document.createElement('div');
+    acc.className='phase-acc'+(phase.open?' open':'')+(pDone===pTotal&&pTotal>0?' all-done':'');
+    acc.innerHTML=`
+      <div class="phase-acc-hd" onclick="togglePhase(${pi})">
+        <span class="ph-num">${String(pi+1).padStart(2,'0')}</span>
+        <span class="ph-name">${phase.name}</span>
+        <span class="ph-pct-badge" style="background:${bc.bg};color:${bc.c}">${pPct}%</span>
+        <span class="ph-hrs">${pHrs>0?pDoneHrs+'/'+pHrs+'h':'—'}</span>
+        <span class="ph-chevron">▼</span>
+      </div>
+      <div class="ph-mini-bar"><div class="ph-mini-fill" style="width:${pPct}%;background:${c.a}"></div></div>
+      <div class="ph-body">
+        <div class="ph-ctrl-row">
+          <input class="ph-name-input" value="${phase.name}" onchange="renamePhase(${pi},this.value)" onclick="event.stopPropagation()" />
+          <button class="btn-xs" onclick="deletePhase(${pi})">Delete</button>
+        </div>
+        ${phase.topics.map((t,ti)=>topicHTML(t,ti,pi,c)).join('')}
+        <div class="add-topic-section">
+          <input class="add-t-input" type="text" placeholder="Add a topic..." id="an-${pi}" />
+          <div class="add-t-row">
+            <input class="add-t-code" type="text" placeholder="T-code / ref" id="ac-${pi}" />
+            <input class="add-t-hrs" type="number" placeholder="hrs" min="0" step="0.5" id="ah-${pi}" />
+            <button class="add-t-btn" onclick="addTopic(${pi})">+ Add</button>
+          </div>
+        </div>
+        <div class="phase-notes-section">
+          <div class="phase-notes-label">Phase notes</div>
+          <textarea class="phase-notes-ta" placeholder="Config tips, T-codes to remember..." oninput="updatePhaseNote(${pi},this.value)">${phase.notes||''}</textarea>
+        </div>
+      </div>`;
+    pl.appendChild(acc);
+  });
+
+  // Add phase button
+  const apb=document.createElement('button');
+  apb.className='add-phase-btn';
+  apb.textContent='+ Add phase';
+  apb.onclick=()=>promptAddPhase();
+  pl.appendChild(apb);
+}
+
+function topicHTML(t,ti,pi,c){
+  const isDone=t.s==='done';
+  const hasNote=t.note&&t.note.trim().length>0;
+  return `
+  <div class="topic-item${isDone?' done':''}" id="ti-${t.id}">
+    <div class="topic-main-row">
+      <div class="chk-circle${isDone?' done':''}" style="${isDone?'--chk-c:'+c.a:''}" onclick="cycleStatus(${pi},${ti})">
+        <span class="chk-tick">✓</span>
+      </div>
+      <div class="topic-content">
+        <div class="topic-name-t">${t.name}</div>
+        ${t.code?`<div class="topic-tcode">${t.code}</div>`:''}
+      </div>
+      <div class="topic-right">
+        <span class="status-pill ${t.s==='done'?'done':t.s==='wip'?'wip':''}" onclick="cycleStatusPill(${pi},${ti})">${t.s==='done'?'Done':t.s==='wip'?'WIP':'—'}</span>
+        <span class="topic-hrs-t">${t.hrs>0?t.hrs+'h':'—'}</span>
+      </div>
+    </div>
+    <div class="topic-action-row">
+      <button class="btn-action${hasNote?' note-act':''}" onclick="toggleTopicNote('${t.id}')">📝 ${hasNote?'Note':'Add note'}</button>
+      <button class="btn-action" onclick="toggleTopicEdit('${t.id}')">✎ Edit</button>
+      <button class="btn-action del" onclick="deleteTopic(${pi},${ti})">✕</button>
+    </div>
+    <div class="topic-note-area" id="na-${t.id}">
+      <textarea class="note-ta" placeholder="Notes, tips, reminders for this topic..." oninput="updateTopicNote(${pi},${ti},this.value)">${t.note||''}</textarea>
+    </div>
+    <div class="topic-edit-area" id="ea-${t.id}">
+      <input class="ti-field" id="ef-name-${t.id}" value="${t.name}" placeholder="Topic name" />
+      <div class="ti-row">
+        <input class="ti-field" id="ef-code-${t.id}" value="${t.code||''}" placeholder="T-code / ref" style="flex:1" />
+        <input class="ti-field ti-hrs" type="number" id="ef-hrs-${t.id}" value="${t.hrs}" min="0" step="0.5" placeholder="hrs" />
+      </div>
+      <div class="ti-save-row">
+        <button class="btn-ti-save" onclick="saveTopicEdit(${pi},${ti},'${t.id}')">Save</button>
+        <button class="btn-ti-cancel" onclick="closeTopicEdit('${t.id}')">Cancel</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Settings page ──
+function renderSettings(){
+  document.getElementById('settingDate').value=D.settings.targetDate||'';
+  document.getElementById('settingHpw').value=D.settings.hrsPerWeek||8;
+  const ml=document.getElementById('modSettingsList');
+  ml.innerHTML='';
+  D.modules.forEach((mod,mi)=>{
+    const c=COLORS[mod.ci%COLORS.length];
+    const row=document.createElement('div');
+    row.className='setting-row';
+    row.style.gap='10px';
+    row.innerHTML=`
+      <div style="width:12px;height:12px;border-radius:50%;background:${c.a};flex-shrink:0"></div>
+      <div style="flex:1;font-size:14px">${mod.name}</div>
+      <button style="padding:6px 12px;border-radius:8px;border:1px solid var(--b2);background:var(--s3);color:var(--mu);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="promptRenameModule(${mi})">Rename</button>
+      ${D.modules.length>1?`<button style="padding:6px 10px;border-radius:8px;border:1px solid var(--rbr);background:var(--rdim);color:var(--rd);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="deleteModule(${mi})">Del</button>`:''}`;
+    ml.appendChild(row);
+  });
+}
+
+function updateSettings(){
+  D.settings.targetDate=document.getElementById('settingDate').value;
+  D.settings.hrsPerWeek=parseInt(document.getElementById('settingHpw').value)||8;
+  markDirty();
+}
+function focusSettingTarget(){showPage('settings');setTimeout(()=>document.getElementById('settingDate').focus(),200);}
+function focusSettingHpw(){showPage('settings');setTimeout(()=>document.getElementById('settingHpw').focus(),200);}
+
+// ── Phase operations ──
+function togglePhase(pi){
+  D.modules[curMod].phases[pi].open=!D.modules[curMod].phases[pi].open;
+  markDirty();renderModulePage();
+}
+function renamePhase(pi,val){D.modules[curMod].phases[pi].name=val;markDirty();}
+function deletePhase(pi){
+  if(!confirm('Delete this phase?'))return;
+  D.modules[curMod].phases.splice(pi,1);markDirty();renderModulePage();renderDashboard();
+}
+function promptAddPhase(){
+  openSheet('New phase',`
+    <label class="sheet-label">Phase name</label>
+    <input class="sheet-input" type="text" id="si-pname" placeholder="e.g. Phase 5 · Advanced topics" />
+    <button class="sheet-btn" onclick="doAddPhase()">Add phase</button>
+  `);
+}
+function doAddPhase(){
+  const n=document.getElementById('si-pname').value.trim();if(!n)return;
+  D.modules[curMod].phases.push({id:uid(),name:n,bi:D.modules[curMod].phases.length%BDGE.length,open:true,notes:'',topics:[]});
+  markDirty();closeSheet();renderModulePage();renderDashboard();
+}
+function updatePhaseNote(pi,val){D.modules[curMod].phases[pi].notes=val;markDirty();}
+
+// ── Topic operations ──
+function cycleStatus(pi,ti){
+  const map={todo:'wip',wip:'done',done:'todo'};
+  D.modules[curMod].phases[pi].topics[ti].s=map[D.modules[curMod].phases[pi].topics[ti].s]||'todo';
+  markDirty();renderModulePage();renderDashboard();
+}
+function cycleStatusPill(pi,ti){cycleStatus(pi,ti);}
+function addTopic(pi){
+  const n=document.getElementById('an-'+pi).value.trim();if(!n)return;
+  const code=document.getElementById('ac-'+pi).value.trim();
+  const hrs=parseFloat(document.getElementById('ah-'+pi).value)||0;
+  D.modules[curMod].phases[pi].topics.push({id:uid(),name:n,code,hrs,s:'todo',note:''});
+  D.modules[curMod].phases[pi].open=true;
+  markDirty();renderModulePage();renderDashboard();
+}
+function deleteTopic(pi,ti){
+  D.modules[curMod].phases[pi].topics.splice(ti,1);
+  markDirty();renderModulePage();renderDashboard();
+}
+function toggleTopicNote(tid){
+  const el=document.getElementById('na-'+tid);
+  el.classList.toggle('open');
+  if(el.classList.contains('open'))el.querySelector('textarea').focus();
+}
+function toggleTopicEdit(tid){
+  document.getElementById('ea-'+tid).classList.toggle('open');
+}
+function closeTopicEdit(tid){document.getElementById('ea-'+tid).classList.remove('open');}
+function saveTopicEdit(pi,ti,tid){
+  const t=D.modules[curMod].phases[pi].topics[ti];
+  t.name=document.getElementById('ef-name-'+tid).value.trim()||t.name;
+  t.code=document.getElementById('ef-code-'+tid).value.trim();
+  t.hrs=parseFloat(document.getElementById('ef-hrs-'+tid).value)||0;
+  markDirty();renderModulePage();renderDashboard();
+}
+function updateTopicNote(pi,ti,val){D.modules[curMod].phases[pi].topics[ti].note=val;markDirty();}
+
+// ── Module operations ──
+function openAddModuleSheet(){
+  openSheet('New module',`
+    <label class="sheet-label">Module name</label>
+    <input class="sheet-input" type="text" id="si-mname" placeholder="e.g. Cost Accounting (CO)" />
+    <label class="sheet-label">Color</label>
+    <div class="color-swatches" id="colorSwatches">
+      ${COLORS.map((c,i)=>`<div class="c-swatch${i===2?' selected':''}" style="background:${c.a}" onclick="selectSwatch(${i})"></div>`).join('')}
+    </div>
+    <input type="hidden" id="si-mci" value="2" />
+    <button class="sheet-btn" onclick="doAddModule()">Create module</button>
+  `);
+}
+function selectSwatch(i){
+  document.querySelectorAll('.c-swatch').forEach((s,idx)=>s.classList.toggle('selected',idx===i));
+  document.getElementById('si-mci').value=i;
+}
+function doAddModule(){
+  const n=document.getElementById('si-mname').value.trim();if(!n)return;
+  const ci=parseInt(document.getElementById('si-mci').value)||2;
+  D.modules.push({id:uid(),name:n,ci,phases:[{id:uid(),name:'Phase 1',bi:0,open:true,notes:'',topics:[]}]});
+  curMod=D.modules.length-1;markDirty();closeSheet();renderAll();
+}
+function promptRenameModule(mi){
+  openSheet('Rename module',`
+    <label class="sheet-label">Module name</label>
+    <input class="sheet-input" type="text" id="si-mrname" value="${D.modules[mi].name}" />
+    <button class="sheet-btn" onclick="doRenameModule(${mi})">Save</button>
+  `);
+}
+function doRenameModule(mi){
+  const n=document.getElementById('si-mrname').value.trim();if(!n)return;
+  D.modules[mi].name=n;markDirty();closeSheet();renderAll();
+}
+function deleteModule(mi){
+  if(!confirm(`Delete "${D.modules[mi].name}"?`))return;
+  D.modules.splice(mi,1);
+  if(curMod>=D.modules.length)curMod=D.modules.length-1;
+  markDirty();renderAll();
+}
+
+// ── Render all ──
+function renderAll(){renderDashboard();if(curPage==='module')renderModulePage();if(curPage==='settings')renderSettings();}
+
+// ── Auto-save ──
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&dirty)persist();});
+window.addEventListener('pagehide',()=>{if(dirty)persist();});
+setInterval(()=>{if(dirty)persist();},30000);
+
+// ── Service worker ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+
+// ── Boot ──
+load();
+renderAll();
+</script>
+</body>
+</html>
